@@ -1,12 +1,11 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component } from '@angular/core';
+import { Header } from './header';
+import { Contacts } from './contacts/contacts';
 
 @Component({
   selector: 'cms-root',
-  imports: [RouterOutlet],
+  imports: [Header, Contacts],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App {
-  protected readonly title = signal('cms');
-}
+export class App {}
