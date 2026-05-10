@@ -16,7 +16,7 @@ export class ContactList {
   contacts: Contact[] = [
     new Contact(
       '1',
-      'R. Kent Jackson',
+      'Bro. Jackson',
       'jacksonk@byui.edu',
       '208-496-3771',
       'images/jacksonk.jpg',
@@ -24,7 +24,7 @@ export class ContactList {
     ),
     new Contact(
       '2',
-      'Rex Barzee',
+      'Bro. Barzee',
       'barzeer@byui.edu',
       '208-496-3768',
       'images/barzeer.jpg',
