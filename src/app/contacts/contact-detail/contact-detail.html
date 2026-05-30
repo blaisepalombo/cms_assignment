@@ -1,9 +1,9 @@
-<div class="panel panel-default">
+<div class="panel panel-default" *ngIf="contact">
   <div class="panel-heading">
     <h3 class="panel-title">{{ contact.name }}</h3>
     <div style="margin-top:10px;">
-      <button class="btn btn-primary">Edit</button>
-      <button class="btn btn-danger">Delete</button>
+      <a class="btn btn-primary" [routerLink]="['edit']">Edit</a>
+      <a class="btn btn-danger" (click)="onDelete()">Delete</a>
     </div>
   </div>
 
