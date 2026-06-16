@@ -56,6 +56,7 @@ export class ContactEdit implements OnInit {
 
   onSubmit(form: NgForm) {
     const value = form.value;
+
     const newContact = new Contact(
       '',
       value.name,
