@@ -1,5 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Subscription } from 'rxjs';
+
 import { Message } from '../message.model';
 import { MessageItem } from '../message-item/message-item';
 import { MessageEdit } from '../message-edit/message-edit';
@@ -11,16 +13,25 @@ import { MessageService } from '../message.service';
   templateUrl: './message-list.html',
   styleUrl: './message-list.css',
 })
-export class MessageList implements OnInit {
+export class MessageList implements OnInit, OnDestroy {
   messages: Message[] = [];
+  subscription!: Subscription;
 
   constructor(private messageService: MessageService) {}
 
-  ngOnInit() {
-    this.messages = this.messageService.getMessages();
+  ngOnInit(): void {
+    this.subscription = this.messageService.messageChangedEvent.subscribe(
+      (messages: Message[]) => {
+        this.messages = messages;
+      }
+    );
 
-    this.messageService.messageChangedEvent.subscribe((messages: Message[]) => {
-      this.messages = messages;
-    });
+    this.messageService.getMessages();
+  }
+
+  ngOnDestroy(): void {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+    }
   }
 }

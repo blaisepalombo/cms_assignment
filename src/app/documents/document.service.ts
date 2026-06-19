@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Subject } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 import { Document } from './document.model';
 import { FIREBASE_URL } from '../firebase-url';
@@ -9,18 +9,24 @@ import { FIREBASE_URL } from '../firebase-url';
   providedIn: 'root'
 })
 export class DocumentService {
-  documentListChangedEvent = new Subject<Document[]>();
+  documentListChangedEvent = new BehaviorSubject<Document[]>([]);
   documents: Document[] = [];
   maxDocumentId = 0;
+  private documentsLoaded = false;
 
   constructor(private http: HttpClient) {}
 
   getDocuments(): Document[] {
+    if (this.documentsLoaded) {
+      return this.documents.slice();
+    }
+
     this.http.get<Document[]>(`${FIREBASE_URL}/documents.json`).subscribe({
       next: (documents: Document[] | null) => {
         this.documents = documents ? documents.filter((document) => document !== null) : [];
         this.maxDocumentId = this.getMaxId();
         this.documents.sort((a, b) => a.name.localeCompare(b.name));
+        this.documentsLoaded = true;
         this.documentListChangedEvent.next(this.documents.slice());
       },
       error: (error: any) => {
@@ -35,9 +41,7 @@ export class DocumentService {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
 
     this.http.put(`${FIREBASE_URL}/documents.json`, JSON.stringify(this.documents), { headers }).subscribe({
-      next: () => {
-        this.documentListChangedEvent.next(this.documents.slice());
-      },
+      next: () => {},
       error: (error: any) => {
         console.error(error);
       }
@@ -75,7 +79,11 @@ export class DocumentService {
 
     this.maxDocumentId++;
     newDocument.id = this.maxDocumentId.toString();
+
     this.documents.push(newDocument);
+    this.documents.sort((a, b) => a.name.localeCompare(b.name));
+
+    this.documentListChangedEvent.next(this.documents.slice());
     this.storeDocuments();
   }
 
@@ -91,7 +99,11 @@ export class DocumentService {
     }
 
     newDocument.id = originalDocument.id;
+
     this.documents[pos] = newDocument;
+    this.documents.sort((a, b) => a.name.localeCompare(b.name));
+
+    this.documentListChangedEvent.next(this.documents.slice());
     this.storeDocuments();
   }
 
@@ -107,6 +119,8 @@ export class DocumentService {
     }
 
     this.documents.splice(pos, 1);
+
+    this.documentListChangedEvent.next(this.documents.slice());
     this.storeDocuments();
   }
 }

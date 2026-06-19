@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Subject } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 import { Message } from './message.model';
 import { FIREBASE_URL } from '../firebase-url';
@@ -9,17 +9,23 @@ import { FIREBASE_URL } from '../firebase-url';
   providedIn: 'root'
 })
 export class MessageService {
-  messageChangedEvent = new Subject<Message[]>();
+  messageChangedEvent = new BehaviorSubject<Message[]>([]);
   messages: Message[] = [];
   maxMessageId = 0;
+  private messagesLoaded = false;
 
   constructor(private http: HttpClient) {}
 
   getMessages(): Message[] {
+    if (this.messagesLoaded) {
+      return this.messages.slice();
+    }
+
     this.http.get<Message[]>(`${FIREBASE_URL}/messages.json`).subscribe({
       next: (messages: Message[] | null) => {
         this.messages = messages ? messages.filter((message) => message !== null) : [];
         this.maxMessageId = this.getMaxId();
+        this.messagesLoaded = true;
         this.messageChangedEvent.next(this.messages.slice());
       },
       error: (error: any) => {
@@ -34,9 +40,7 @@ export class MessageService {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
 
     this.http.put(`${FIREBASE_URL}/messages.json`, JSON.stringify(this.messages), { headers }).subscribe({
-      next: () => {
-        this.messageChangedEvent.next(this.messages.slice());
-      },
+      next: () => {},
       error: (error: any) => {
         console.error(error);
       }
@@ -74,7 +78,10 @@ export class MessageService {
 
     this.maxMessageId++;
     message.id = this.maxMessageId.toString();
+
     this.messages.push(message);
+
+    this.messageChangedEvent.next(this.messages.slice());
     this.storeMessages();
   }
 }

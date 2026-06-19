@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Subject } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
 import { Contact } from './contact.model';
 import { FIREBASE_URL } from '../firebase-url';
@@ -9,18 +9,24 @@ import { FIREBASE_URL } from '../firebase-url';
   providedIn: 'root'
 })
 export class ContactService {
-  contactListChangedEvent = new Subject<Contact[]>();
+  contactListChangedEvent = new BehaviorSubject<Contact[]>([]);
   contacts: Contact[] = [];
   maxContactId = 0;
+  private contactsLoaded = false;
 
   constructor(private http: HttpClient) {}
 
   getContacts(): Contact[] {
+    if (this.contactsLoaded) {
+      return this.contacts.slice();
+    }
+
     this.http.get<Contact[]>(`${FIREBASE_URL}/contacts.json`).subscribe({
       next: (contacts: Contact[] | null) => {
         this.contacts = contacts ? contacts.filter((contact) => contact !== null) : [];
         this.maxContactId = this.getMaxId();
         this.contacts.sort((a, b) => a.name.localeCompare(b.name));
+        this.contactsLoaded = true;
         this.contactListChangedEvent.next(this.contacts.slice());
       },
       error: (error: any) => {
@@ -35,9 +41,7 @@ export class ContactService {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
 
     this.http.put(`${FIREBASE_URL}/contacts.json`, JSON.stringify(this.contacts), { headers }).subscribe({
-      next: () => {
-        this.contactListChangedEvent.next(this.contacts.slice());
-      },
+      next: () => {},
       error: (error: any) => {
         console.error(error);
       }
@@ -75,7 +79,11 @@ export class ContactService {
 
     this.maxContactId++;
     newContact.id = this.maxContactId.toString();
+
     this.contacts.push(newContact);
+    this.contacts.sort((a, b) => a.name.localeCompare(b.name));
+
+    this.contactListChangedEvent.next(this.contacts.slice());
     this.storeContacts();
   }
 
@@ -91,7 +99,11 @@ export class ContactService {
     }
 
     newContact.id = originalContact.id;
+
     this.contacts[pos] = newContact;
+    this.contacts.sort((a, b) => a.name.localeCompare(b.name));
+
+    this.contactListChangedEvent.next(this.contacts.slice());
     this.storeContacts();
   }
 
@@ -107,6 +119,8 @@ export class ContactService {
     }
 
     this.contacts.splice(pos, 1);
+
+    this.contactListChangedEvent.next(this.contacts.slice());
     this.storeContacts();
   }
 }

@@ -10,4 +10,17 @@ import { Contact } from '../contact.model';
 })
 export class ContactItem {
   @Input() contact!: Contact;
+
+  get imagePath(): string {
+    if (!this.contact || !this.contact.imageUrl) {
+      return 'images/barzeer.jpg';
+    }
+
+    return this.contact.imageUrl.replace('../assets/', '');
+  }
+
+  useFallbackImage(event: Event): void {
+    const image = event.target as HTMLImageElement;
+    image.src = 'images/barzeer.jpg';
+  }
 }

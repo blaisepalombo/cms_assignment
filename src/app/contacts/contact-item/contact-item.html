@@ -8,8 +8,10 @@
 
   <div class="pull-right">
     <img
-      [src]="contact.imageUrl"
+      [src]="imagePath"
+      (error)="useFallbackImage($event)"
       style="height:50px;"
+      alt="{{ contact.name }}"
     />
   </div>
 </a>
