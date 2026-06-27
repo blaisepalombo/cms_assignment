@@ -30,6 +30,10 @@ export class ContactDetail implements OnInit {
     });
   }
 
+  useFallbackImage(event: Event): void {
+  const image = event.target as HTMLImageElement;
+  image.src = 'images/barzeer.jpg';
+  }
   onDelete() {
     this.contactService.deleteContact(this.contact);
     this.router.navigateByUrl('/contacts');
