@@ -5,6 +5,7 @@ var http = require('http');
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var mongoose = require('mongoose');
 
 // Get defined routing files
 var index = require('./server/routes/app');
@@ -13,6 +14,15 @@ const contactRoutes = require('./server/routes/contacts');
 const documentRoutes = require('./server/routes/documents');
 
 var app = express();
+
+// Connect to MongoDB
+mongoose.connect('mongodb://localhost:27017/cms')
+  .then(() => {
+    console.log('Connected to database!');
+  })
+  .catch((err) => {
+    console.log('Connection failed: ' + err);
+  });
 
 // Tell express to use the following parsers for POST data
 app.use(bodyParser.json());
@@ -60,5 +70,5 @@ const server = http.createServer(app);
 
 // Start listening
 server.listen(port, function() {
-  console.log('API running at http://localhost:' + port);
+  console.log('API running on localhost: ' + port);
 });

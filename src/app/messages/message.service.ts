@@ -3,7 +3,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
 
 import { Message } from './message.model';
-import { FIREBASE_URL } from '../firebase-url';
 
 @Injectable({
   providedIn: 'root'
@@ -11,8 +10,8 @@ import { FIREBASE_URL } from '../firebase-url';
 export class MessageService {
   messageChangedEvent = new BehaviorSubject<Message[]>([]);
   messages: Message[] = [];
-  maxMessageId = 0;
   private messagesLoaded = false;
+  private apiUrl = 'http://localhost:3000/messages';
 
   constructor(private http: HttpClient) {}
 
@@ -21,10 +20,9 @@ export class MessageService {
       return this.messages.slice();
     }
 
-    this.http.get<Message[]>(`${FIREBASE_URL}/messages.json`).subscribe({
-      next: (messages: Message[] | null) => {
-        this.messages = messages ? messages.filter((message) => message !== null) : [];
-        this.maxMessageId = this.getMaxId();
+    this.http.get<{ message: string; messages: Message[] }>(this.apiUrl).subscribe({
+      next: (responseData) => {
+        this.messages = responseData.messages ? responseData.messages : [];
         this.messagesLoaded = true;
         this.messageChangedEvent.next(this.messages.slice());
       },
@@ -34,17 +32,6 @@ export class MessageService {
     });
 
     return this.messages.slice();
-  }
-
-  storeMessages() {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-
-    this.http.put(`${FIREBASE_URL}/messages.json`, JSON.stringify(this.messages), { headers }).subscribe({
-      next: () => {},
-      error: (error: any) => {
-        console.error(error);
-      }
-    });
   }
 
   getMessage(id: string): Message | null {
@@ -57,31 +44,27 @@ export class MessageService {
     return null;
   }
 
-  getMaxId(): number {
-    let maxId = 0;
-
-    for (const message of this.messages) {
-      const currentId = parseInt(message.id, 10);
-
-      if (currentId > maxId) {
-        maxId = currentId;
-      }
-    }
-
-    return maxId;
-  }
-
   addMessage(message: Message) {
     if (!message) {
       return;
     }
 
-    this.maxMessageId++;
-    message.id = this.maxMessageId.toString();
+    message.id = '';
 
-    this.messages.push(message);
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
 
-    this.messageChangedEvent.next(this.messages.slice());
-    this.storeMessages();
+    this.http.post<{ message: string; newMessage: Message }>(
+      this.apiUrl,
+      message,
+      { headers: headers }
+    ).subscribe({
+      next: (responseData) => {
+        this.messages.push(responseData.newMessage);
+        this.messageChangedEvent.next(this.messages.slice());
+      },
+      error: (error: any) => {
+        console.error(error);
+      }
+    });
   }
 }

@@ -3,7 +3,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
 
 import { Document } from './document.model';
-import { FIREBASE_URL } from '../firebase-url';
 
 @Injectable({
   providedIn: 'root'
@@ -11,8 +10,8 @@ import { FIREBASE_URL } from '../firebase-url';
 export class DocumentService {
   documentListChangedEvent = new BehaviorSubject<Document[]>([]);
   documents: Document[] = [];
-  maxDocumentId = 0;
   private documentsLoaded = false;
+  private apiUrl = 'http://localhost:3000/documents';
 
   constructor(private http: HttpClient) {}
 
@@ -21,13 +20,11 @@ export class DocumentService {
       return this.documents.slice();
     }
 
-    this.http.get<Document[]>(`${FIREBASE_URL}/documents.json`).subscribe({
-      next: (documents: Document[] | null) => {
-        this.documents = documents ? documents.filter((document) => document !== null) : [];
-        this.maxDocumentId = this.getMaxId();
-        this.documents.sort((a, b) => a.name.localeCompare(b.name));
+    this.http.get<{ message: string; documents: Document[] }>(this.apiUrl).subscribe({
+      next: (responseData) => {
+        this.documents = responseData.documents ? responseData.documents : [];
+        this.sortAndSend();
         this.documentsLoaded = true;
-        this.documentListChangedEvent.next(this.documents.slice());
       },
       error: (error: any) => {
         console.error(error);
@@ -35,17 +32,6 @@ export class DocumentService {
     });
 
     return this.documents.slice();
-  }
-
-  storeDocuments() {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-
-    this.http.put(`${FIREBASE_URL}/documents.json`, JSON.stringify(this.documents), { headers }).subscribe({
-      next: () => {},
-      error: (error: any) => {
-        console.error(error);
-      }
-    });
   }
 
   getDocument(id: string): Document | null {
@@ -58,33 +44,28 @@ export class DocumentService {
     return null;
   }
 
-  getMaxId(): number {
-    let maxId = 0;
-
-    for (const document of this.documents) {
-      const currentId = parseInt(document.id, 10);
-
-      if (currentId > maxId) {
-        maxId = currentId;
-      }
-    }
-
-    return maxId;
-  }
-
-  addDocument(newDocument: Document) {
-    if (!newDocument) {
+  addDocument(document: Document) {
+    if (!document) {
       return;
     }
 
-    this.maxDocumentId++;
-    newDocument.id = this.maxDocumentId.toString();
+    document.id = '';
 
-    this.documents.push(newDocument);
-    this.documents.sort((a, b) => a.name.localeCompare(b.name));
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
 
-    this.documentListChangedEvent.next(this.documents.slice());
-    this.storeDocuments();
+    this.http.post<{ message: string; document: Document }>(
+      this.apiUrl,
+      document,
+      { headers: headers }
+    ).subscribe({
+      next: (responseData) => {
+        this.documents.push(responseData.document);
+        this.sortAndSend();
+      },
+      error: (error: any) => {
+        console.error(error);
+      }
+    });
   }
 
   updateDocument(originalDocument: Document, newDocument: Document) {
@@ -92,7 +73,7 @@ export class DocumentService {
       return;
     }
 
-    const pos = this.documents.indexOf(originalDocument);
+    const pos = this.documents.findIndex(d => d.id === originalDocument.id);
 
     if (pos < 0) {
       return;
@@ -100,11 +81,21 @@ export class DocumentService {
 
     newDocument.id = originalDocument.id;
 
-    this.documents[pos] = newDocument;
-    this.documents.sort((a, b) => a.name.localeCompare(b.name));
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
 
-    this.documentListChangedEvent.next(this.documents.slice());
-    this.storeDocuments();
+    this.http.put(
+      this.apiUrl + '/' + originalDocument.id,
+      newDocument,
+      { headers: headers }
+    ).subscribe({
+      next: () => {
+        this.documents[pos] = newDocument;
+        this.sortAndSend();
+      },
+      error: (error: any) => {
+        console.error(error);
+      }
+    });
   }
 
   deleteDocument(document: Document) {
@@ -112,15 +103,25 @@ export class DocumentService {
       return;
     }
 
-    const pos = this.documents.indexOf(document);
+    const pos = this.documents.findIndex(d => d.id === document.id);
 
     if (pos < 0) {
       return;
     }
 
-    this.documents.splice(pos, 1);
+    this.http.delete(this.apiUrl + '/' + document.id).subscribe({
+      next: () => {
+        this.documents.splice(pos, 1);
+        this.sortAndSend();
+      },
+      error: (error: any) => {
+        console.error(error);
+      }
+    });
+  }
 
+  private sortAndSend() {
+    this.documents.sort((a, b) => a.name.localeCompare(b.name));
     this.documentListChangedEvent.next(this.documents.slice());
-    this.storeDocuments();
   }
 }

@@ -41,12 +41,19 @@ export class MessageItem implements OnInit, OnDestroy {
       return;
     }
 
-    const contact: Contact | null = this.contactService.getContact(this.message.sender);
+    const sender: any = this.message.sender;
+
+    if (sender.name) {
+      this.messageSender = sender.name;
+      return;
+    }
+
+    const contact: Contact | null = this.contactService.getContact(sender);
 
     if (contact) {
       this.messageSender = contact.name;
     } else {
-      this.messageSender = this.message.sender;
+      this.messageSender = sender;
     }
   }
 
